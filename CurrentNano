@@ -1,0 +1,47 @@
+// Constants for the digital Pins 
+const int leftPin = 2;     // the digital pin for left signal
+const int rightPin = 3;    // digital right pin 
+const int forwardPin = 4;  // digital forward pin   
+const int reversePin = 5;  // digital reverse pin   
+const int BRPin = 6;       // digital Brake Release pin
+const int QSPin = 7;       // digital quick Stop pin
+const int SUPin = 8;       // digital seat up pin
+const int SDPin = 9;       // digital seat down pin
+const int ledPin = 10;     // LED pin
+
+void setup() {
+  Serial.begin(19200);
+  pinMode(leftPin, INPUT_PULLUP);
+  pinMode(rightPin, INPUT_PULLUP);
+  pinMode(forwardPin, INPUT_PULLUP);
+  pinMode(reversePin, INPUT_PULLUP);
+  pinMode(BRPin, INPUT_PULLUP);
+  pinMode(QSPin, INPUT_PULLUP);
+  pinMode(SUPin, INPUT_PULLUP);
+  pinMode(SDPin, INPUT_PULLUP);
+}
+
+void loop() {
+  analogReference(EXTERNAL);
+
+  char start = ':';   // starts the set
+  char next  = ',';   // useded to break up the string
+  
+  String xVal = String(analogRead(A0), DEC);
+  String yVal = String(analogRead(A1), DEC);  
+  String pot  = String(analogRead(A2), DEC);  
+  String leftVal = String(digitalRead(leftPin), DEC);
+  String rightVal = String(digitalRead(rightPin), DEC);
+  String forwardVal = String(digitalRead(forwardPin), DEC);
+  String reverseVal = String(digitalRead(reversePin), DEC);
+  String BRVal = String(digitalRead(BRPin), DEC);
+  String QSVal = String(digitalRead(QSPin), DEC);
+  String SUVal = String(digitalRead(SUPin), DEC);
+  String SDVal = String(digitalRead(SDPin), DEC);
+  
+  String sendString = String(start + xVal + next + yVal + next + pot + next + leftVal + next + rightVal + 
+    next + forwardVal + next + reverseVal + next + BRVal + next + QSVal + next + SUVal + next + SDVal);
+  Serial.print(sendString);
+  Serial.flush();
+  //delay(5);
+}
