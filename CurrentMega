@@ -35,16 +35,10 @@ bool isWii;
 //-------------------- Power Data --------------------------//
 int buttonTurnOnOff = 13;
 int systemStartPin = 8;
+int PowerStrengthPin = 7;
 bool seatInactive = false;
 bool driveInactive = false;
 int inactiveCounter = 0;
-
-//-------------------- Atari Pins --------------------------//
-//int atariF  = 2;    // Forward
-//int atariB  = 3;    // Backwards
-//int atariL  = 4;    // Left
-//int atariR  = 5;    // Right
-//int atariBu = 6 ;   // Button
 
 //--------------------- Seat Data -------------------------//
 //int speedControl = A5;
@@ -63,12 +57,15 @@ int BatPin = A0;
 int battery = 0;
 
 //-------------------- Signal Data --------------------------//
+const bool DEBUG = true;
 int analogZeroCheck = 0;
 int potZeroCheck = 0;
 int digitalZeroCheck = 0;
 int seatZeroCheck = 0;
 int oldCount = 0;
 int sameCount = 0;
+int initialStartCount = 0;
+unsigned long loopTime = 0;
 
 void setup()
 {
@@ -77,8 +74,6 @@ void setup()
   pinMode(systemStartPin, OUTPUT);
   digitalWrite(systemStartPin, HIGH);
 
-  delay(4000);    // Allows for the cart to turn on and wait until the system starts up
-
   //-------------------- Pin Setup --------------------------//
   // Atari hookups
   pinMode(2, INPUT_PULLUP);
@@ -86,8 +81,11 @@ void setup()
   pinMode(4, INPUT_PULLUP);
   pinMode(5, INPUT_PULLUP);
   pinMode(6, INPUT_PULLUP);
-  pinMode(buttonTurnOnOff, INPUT_PULLUP);
 
+  // Pwr
+  pinMode(buttonTurnOnOff, INPUT_PULLUP);
+  pinMode(PowerStrengthPin, OUTPUT);
+  
   // Seat Motor
   pinMode(motorControlPWM, OUTPUT); // input a
   pinMode(motorControlDIR, OUTPUT); // input b
@@ -105,6 +103,8 @@ void setup()
   Serial1.print(0);
   Serial1.print("\r\n");
 
+  loopTime = millis();
+
   //-------------------- Boolean/Declarations --------------------------//
   isWii = false;      // is Wii plugged in?
   killSwitch = false; // stalls motor
@@ -115,19 +115,38 @@ void setup()
   //-------------------- Nunchuk Initialization --------------------------//
   Wire.begin();
   nunchuk.init(); // initiated in loop as necissary
+
+  delay(3000);    // Allows for the cart to turn on and wait until the system starts up
 }
 
 void loop()
 {
+  loopTime -= millis();
   //-------------------- System Off --------------------------//
+  // rear power btn is pressed
   if (digitalRead(buttonTurnOnOff) == LOW)
   {
-    Serial.println("SHUTTING DOWN");
+    if (DEBUG) Serial.println("SHUTTING DOWN");
     shutDown();
   }
 
-  readFront();
+  //------------------- start delay/ fix data-----------------------//
+  if (initialStartCount == 0) {
+    for (int i = 0; i < 100; i++){
+      delay(10);
+      readFront();
+      printFront();
+      Serial.println();
+    }
+    Serial.println("DONE");
+    initialStartCount = 1;
+  }
+  
+  
 
+  //------------------- Front Controllers --------------------------//
+  readFront();
+  
   //-------------------- Rear Controllers --------------------------//
   Serial.flush();
   readWii();
@@ -137,32 +156,26 @@ void loop()
 
 
   //------------------- Pwr ------------------------------------------//
-  readPower();
-  printPwr();
-  Serial.print(analogRead(A0));
 
+  battery = readPower();
+  if (DEBUG) Serial.print(readPower());
+  analogWrite(PowerStrengthPin, HIGH);  
   //-------------------- Print Controllers --------------------------//
-  printFront();
-  Serial.flush();
-//  printWii();
-//  Serial.flush();
-//  printAtari();
-//  Serial.flush();
-  printMotorVals();
-  Serial.println();
-  
-
-  //-------------------- Nano Transmission Check --------------------------//
-  analogZeroCheck = myFrontArray[0] + myFrontArray[1];
-  potZeroCheck = myFrontArray[2];
-  digitalZeroCheck = myFrontArray[3] + myFrontArray[4] + myFrontArray[5] + myFrontArray[6] + myFrontArray[9];
-  seatZeroCheck = myFrontArray[10] + myFrontArray[11];
-
-  // If all any of the data sent across is 0 then shut down the system.
-  //  if (analogZeroCheck == 0 || potZeroCheck == 0 || digitalZeroCheck == 0 || seatZeroCheck == 0)
-  //  {
-  //    shutDown();
-  //  }
+  if (DEBUG) {
+    printFront();
+    //Serial.flush();
+    printWii();
+    //Serial.flush();
+    printAtari();
+    //Serial.flush();
+    printMotorVals();
+    //Serial.flush();
+    //Serial.print(loopTime);
+    //Serial.flush();
+    Serial.print(" ");
+    Serial.print(digitalRead(systemStartPin));
+    Serial.println();
+  }
 
   //-------------------- Controller Signals --------------------------//
   seatControl();
@@ -177,27 +190,23 @@ void loop()
   Serial1.print("\r\n");
 
   //-------------------- Inactive Turn Off --------------------------//
-  if (driveVal == 0 && turnVal == 0)
-  {
-    driveInactive = true;
-  }
-  else
-  {
-    driveInactive = false;
-  }
+  if (driveVal == 0 && turnVal == 0) driveInactive = true;
 
+  else driveInactive = false;
+  
   if (driveInactive == true && seatInactive == true)
   {
     if (inactiveCounter == 0)
     {
-      Timer3.attachInterrupt(shutDown);
+      Serial.println("------------Shutdown from there---");
+      //Timer3.attachInterrupt(shutDown);
       inactiveCounter = 1;
     }
   }
   else
   {
     inactiveCounter = 0;
-    Timer3.stop();
+    //Timer3.stop();
   }
 }
 
@@ -225,9 +234,9 @@ void readFront()
       Serial3.read();         // Reads ':'
     }
   }
-  else 
+  else
   {
-    Serial.println("-----------------------Unavailable________-____--_____");
+    if(DEBUG) Serial.println("--------------Unavailable------------");
     shutDown();
   }
 }
@@ -240,7 +249,7 @@ void readWii()
   if (Wire.requestFrom(0x52, 6) != 0)
   {
     nunchuk.init();
-    Serial.println("init_-___--___--_____________________________________");
+    if(DEBUG) Serial.println("init_-__--___---____----_____________");
     isWii = true;
   }
   else
@@ -303,13 +312,13 @@ void readAtari()
 }
 
 //ReadPower
-void readPower()
+int readPower()
 {
-  battery = analogRead(BatPin);
+  return analogRead(BatPin);
 }
 
 //PrintPower
-void printPwr() 
+void printPwr()
 {
   Serial.print("Pwr: " + battery);
 }
@@ -465,7 +474,7 @@ void cartControl()
 // values from the Arduino Nano and then assign the driveVal and turnVal based on what controller is being used in front.
 void proccessFront()
 {
-  
+
   int newCount = myFrontArray[13];
   if (myFrontArray[12] == 1)
   {
@@ -482,7 +491,7 @@ void proccessFront()
     Serial.println("----------------Coutn Shuutdown Signal---------------");
     shutDown();
   }
-  
+
   oldCount = newCount;
 
   int xVal = 0;
@@ -544,7 +553,7 @@ void killMotor()
 // Function that when called turns off systemStartPin which turns off the entire system.
 void shutDown()
 {
+  Serial.println("----------------ShutDown from Here----");
   digitalWrite(systemStartPin, LOW);
 }
-
 
