@@ -3,15 +3,17 @@
  * 
  * Arduino Nano mounted to a PCB.
  * An analog joystick.
- * A joystick jack to allow for another joystick to be used instead of the analog joystick.
+ * 9 pin serial connection wired for an attari digital joystick or wireless joystick.
  * A switch to control the raising and lowering of the seat
  * A potentiometer to control the overall speed of the cart
  * Digital jacks for buttons/switches to control // Readings for Quick Stop, Brake Release, Button to shut off system, Seat-up command, and Seat-down command.
  * CAT5 cable to send the data to the back of the cart to the Arduino Mega.
- * 
+ * SPDT Momentary action switch for on off/light indication.
+ * A secondary easy reach on Btn
+ *
  * This code will collect all data attached to the Arduino Nano and send it via the CAT5 cable back to the Arduino Mega.
  * 
- * By: Andrew Gates, Reagan Stovall and Jesse Wiklanski in conjunction with Robert Gutmann.
+ * By: Reagan Stovall, Andrew Gates, and Jesse Wiklanski in conjunction with Robert Gutmann.
  * For: Mary Bridge Children's Therapy Unit at Good Samaritan Hospital.
  */
  
@@ -21,7 +23,7 @@ const int yPin = A2;
 const int xPin = A1;
  
 // Constants for the digital Pins
-const int forwardPin = 10;    // Digital pin for left signal
+const int forwardPin = 10;   // Digital pin for left signal
 const int reversePin = 9;    // Digital right pin
 const int leftPin = 8;       // Digital forward pin
 const int rightPin = 7;      // Digital reverse pin
@@ -30,12 +32,11 @@ const int BRPin = 5;         // Digital quick Stop pin
 const int button = 4;        // Digital button from atari
 const int SUPin = 3;         // Digital seat up pin
 const int SDPin = 2;         // Digital seat down pin
-const int onOffPin = 11;        // Button to turn system off
+const int onOffPin = 11;     // Button to turn system off
 const int ledPin = 12;       // LED pin
 int count = 0;
  
-void setup() 
-{
+void setup() {
   pinMode(forwardPin, INPUT_PULLUP);  //2
   pinMode(reversePin, INPUT_PULLUP);  //3
   pinMode(leftPin, INPUT_PULLUP);     //4
